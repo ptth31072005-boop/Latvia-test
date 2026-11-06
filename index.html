@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng Dụng Học Từ Vựng Tiếng Latvia - Flashcard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .transition-transform { transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md py-4 px-6">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                🇱🇻 <span>Flashcard Tiếng Latvia</span>
+            </h1>
+            <nav class="flex gap-2 bg-indigo-700 p-1 rounded-xl">
+                <button onclick="switchTab('study')" id="btn-study" class="px-4 py-2 rounded-lg font-medium transition bg-white text-indigo-700 shadow">📖 Học Thẻ</button>
+                <button onclick="switchTab('quiz')" id="btn-quiz" class="px-4 py-2 rounded-lg font-medium transition text-white hover:bg-indigo-600">📝 Kiểm Tra</button>
+                <button onclick="switchTab('manage')" id="btn-manage" class="px-4 py-2 rounded-lg font-medium transition text-white hover:bg-indigo-600">⚙️ Quản Lý Từ</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-2xl w-full mx-auto p-4 sm:p-6 flex-grow space-y-4">
+
+        <!-- THANH CHỌN NHÓM -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="w-full sm:w-auto flex items-center gap-2">
+                <label for="group-selector" class="font-semibold text-sm text-slate-600 whitespace-nowrap">📁 Chọn nhóm học:</label>
+                <select id="group-selector" onchange="changeActiveGroup()" class="w-full sm:w-60 border border-slate-300 p-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-indigo-700 bg-indigo-50">
+                </select>
+            </div>
+            <span id="group-word-count" class="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full">0 từ trong nhóm</span>
+        </div>
+
+        <!-- TAB 1: STUDY -->
+        <div id="tab-study" class="space-y-6">
+            <div class="flex justify-between items-center text-sm font-semibold text-slate-500">
+                <span id="study-progress">Từ 1 / 0</span>
+                <span id="study-status-badge" class="px-2.5 py-1 rounded-full text-xs bg-amber-100 text-amber-700">Chưa thuộc</span>
+            </div>
+
+            <!-- Flashcard 3D -->
+            <div class="perspective-1000 w-full h-72 cursor-pointer select-none" onclick="flipCard()">
+                <div id="flashcard-inner" class="relative w-full h-full rounded-2xl shadow-xl transition-transform transform-style-3d bg-white border border-slate-200">
+                    <div class="absolute inset-0 w-full h-full backface-hidden flex flex-col items-center justify-center p-6 text-center">
+                        <span class="text-xs uppercase tracking-widest text-indigo-500 font-bold mb-2">Từ tiếng Latvia (Nhấn để lật)</span>
+                        <h2 id="card-word" class="text-4xl font-extrabold text-slate-800 mb-4">--</h2>
+                        <button onclick="event.stopPropagation(); speakWord()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-1 transition">
+                            🔊 Phát âm chuẩn
+                        </button>
+                    </div>
+                    <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 flex flex-col items-center justify-center p-6 text-center bg-indigo-50 rounded-2xl">
+                        <span class="text-xs uppercase tracking-widest text-indigo-600 font-bold mb-2">Ý nghĩa tiếng Việt</span>
+                        <h3 id="card-meaning" class="text-3xl font-bold text-indigo-900 mb-2">--</h3>
+                        <p id="card-example" class="text-slate-600 italic text-sm">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="prevCard()" class="flex-1 bg-white hover:bg-slate-50 border border-slate-300 py-3 rounded-xl font-semibold shadow-sm transition">⬅️ Từ trước</button>
+                <button onclick="toggleMastered()" id="btn-mastered" class="px-5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 py-3 rounded-xl font-semibold shadow-sm transition">✅ Đã thuộc</button>
+                <button onclick="nextCard()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold shadow-md transition">Tiếp theo ➡️</button>
+            </div>
+        </div>
+
+        <!-- TAB 2: QUIZ -->
+        <div id="tab-quiz" class="hidden space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex justify-between items-center border-b pb-4">
+                <h3 class="text-lg font-bold text-slate-800">Kiểm Tra Trắc Nghiệm</h3>
+                <span id="quiz-score" class="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Điểm: 0</span>
+            </div>
+            
+            <div id="quiz-container" class="space-y-4">
+                <p id="quiz-question" class="text-lg font-medium text-slate-700">Nghĩa của từ <strong id="quiz-word" class="text-indigo-600">--</strong> là gì?</p>
+                <div id="quiz-options" class="grid grid-cols-1 gap-3"></div>
+            </div>
+            <div id="quiz-result-box" class="hidden text-center py-4">
+                <p id="quiz-feedback" class="text-xl font-bold mb-4"></p>
+                <button onclick="nextQuizQuestion()" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow hover:bg-indigo-700 transition">Tiếp tục câu hỏi</button>
+            </div>
+        </div>
+
+        <!-- TAB 3: MANAGE -->
+        <div id="tab-manage" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="text-lg font-bold text-slate-800">Thêm Từng Từ Vựng</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="text" id="input-word" placeholder="Từ tiếng Latvia (VD: Labrīt)" class="border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="input-meaning" placeholder="Nghĩa tiếng Việt (VD: Chào buổi sáng)" class="border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="text" id="input-example" placeholder="Ví dụ câu (Tùy chọn)" class="border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="input-group-name" placeholder="Tên nhóm (VD: Nhóm 1 - Cơ bản)" class="border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button onclick="addWord()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold shadow transition">Thêm Vào Nhóm</button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="text-lg font-bold text-slate-800">📥 Dán Hàng Loạt Theo Nhóm</h3>
+                <p class="text-xs text-slate-500">Nhập tên nhóm muốn thêm vào, sau đó dán danh sách mỗi dòng dạng: <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">Từ | Nghĩa | Ví dụ</code></p>
+                <input type="text" id="bulk-group-name" placeholder="Tên nhóm cho danh sách dán (VD: Nhóm 2 - Mua sắm)" class="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <textarea id="bulk-textarea" rows="4" placeholder="Labrīt | Chào buổi sáng | Labrīt, kā klājas?&#10;Paldies | Cảm ơn" class="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"></textarea>
+                <button onclick="importBulkText()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold shadow transition">Nhập Nhanh Vào Nhóm</button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-slate-800">Quản Lý Từ Trong Nhóm</h3>
+                    <button onclick="deleteCurrentGroup()" class="text-xs bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-lg font-medium">Xóa nhóm này</button>
+                </div>
+                <div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-100 rounded-xl">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-50 sticky top-0 text-slate-500">
+                            <tr>
+                                <th class="p-3 border-b">Từ tiếng Latvia</th>
+                                <th class="p-3 border-b">Nghĩa tiếng Việt</th>
+                                <th class="p-3 border-b text-right">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="word-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="text-center py-6 text-xs text-slate-400">
+        Flashcard Tiếng Latvia App • Lưu tự động trên trình duyệt
+    </footer>
+
+    <script>
+        let defaultData = {
+            "Nhóm 1: Chào hỏi cơ bản": [
+                { word: "Labrīt!", meaning: "Chào buổi sáng!", example: "Labrīt, kā jums klājas?", mastered: false },
+                { word: "Paldies!", meaning: "Cảm ơn!", example: "Liels paldies par palīdzību!", mastered: false },
+                { word: "Uz redzēšanos!", meaning: "Tạm biệt!", example: "Uz redzēšanos rīt!", mastered: false }
+            ],
+            "Nhóm 2: Mua sắm & Đời sống": [
+                { word: "Cik tas maksā?", meaning: "Cái này giá bao nhiêu?", example: "Cik tas maksā eiro?", mastered: false },
+                { word: "Veikals", meaning: "Cửa hàng / Siêu thị", example: "Veikals ir atvērts.", mastered: false },
+                { word: "Ūdens", meaning: "Nước", example: "Man vajag ūdeni.", mastered: false }
+            ]
+        };
+
+        let vocabData = JSON.parse(localStorage.getItem("latvian_flashcard_data")) || defaultData;
+        let activeGroup = Object.keys(vocabData)[0] || "Nhóm mặc định";
+        let currentIndex = 0;
+        let isFlipped = false;
+        let quizScore = 0;
+        let currentQuizCorrectMeaning = "";
+
+        function saveData() {
+            localStorage.setItem("latvian_flashcard_data", JSON.stringify(vocabData));
+        }
+
+        function updateGroupSelectors() {
+            let groups = Object.keys(vocabData);
+            if (groups.length === 0) {
+                vocabData["Nhóm mặc định"] = [];
+                groups = ["Nhóm mặc định"];
+            }
+            if (!groups.includes(activeGroup)) {
+                activeGroup = groups[0];
+            }
+
+            let selector = document.getElementById("group-selector");
+            let html = "";
+            groups.forEach(g => {
+                let count = vocabData[g].length;
+                let selected = g === activeGroup ? "selected" : "";
+                html += `<option value="${g}" ${selected}>${g} (${count} từ)</option>`;
+            });
+            selector.innerHTML = html;
+
+            let currentList = vocabData[activeGroup] || [];
+            document.getElementById("group-word-count").innerText = `${currentList.length} từ trong nhóm`;
+        }
+
+        function changeActiveGroup() {
+            let selector = document.getElementById("group-selector");
+            activeGroup = selector.value;
+            currentIndex = 0;
+            updateGroupSelectors();
+            updateCardUI();
+            renderTable();
+        }
+
+        function switchTab(tab) {
+            updateGroupSelectors();
+            ['study', 'quiz', 'manage'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`btn-${t}`).className = "px-4 py-2 rounded-lg font-medium transition text-white hover:bg-indigo-600";
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`btn-${tab}`).className = "px-4 py-2 rounded-lg font-medium transition bg-white text-indigo-700 shadow";
+
+            if (tab === 'study') updateCardUI();
+            if (tab === 'quiz') startQuiz();
+            if (tab === 'manage') renderTable();
+        }
+
+        function updateCardUI() {
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length === 0) {
+                document.getElementById("card-word").innerText = "Nhóm trống!";
+                document.getElementById("card-meaning").innerText = "Hãy thêm từ mới vào nhóm này ở mục Quản lý.";
+                document.getElementById("card-example").innerText = "";
+                document.getElementById("study-progress").innerText = "0 / 0";
+                return;
+            }
+            if (currentIndex >= currentList.length) currentIndex = 0;
+            
+            let item = currentList[currentIndex];
+            document.getElementById("card-word").innerText = item.word;
+            document.getElementById("card-meaning").innerText = item.meaning;
+            document.getElementById("card-example").innerText = item.example ? `Ví dụ: ${item.example}` : "";
+            document.getElementById("study-progress").innerText = `Từ ${currentIndex + 1} / ${currentList.length}`;
+            
+            let badge = document.getElementById("study-status-badge");
+            let btnMaster = document.getElementById("btn-mastered");
+            if (item.mastered) {
+                badge.innerText = "Đã thuộc ⭐";
+                badge.className = "px-2.5 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700 font-semibold";
+                btnMaster.innerText = "🔄 Học lại";
+            } else {
+                badge.innerText = "Chưa thuộc";
+                badge.className = "px-2.5 py-1 rounded-full text-xs bg-amber-100 text-amber-700 font-semibold";
+                btnMaster.innerText = "✅ Đã thuộc";
+            }
+
+            if (isFlipped) {
+                document.getElementById("flashcard-inner").classList.remove("rotate-y-180");
+                isFlipped = false;
+            }
+        }
+
+        function flipCard() {
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length === 0) return;
+            let inner = document.getElementById("flashcard-inner");
+            isFlipped = !isFlipped;
+            if (isFlipped) {
+                inner.classList.add("rotate-y-180");
+            } else {
+                inner.classList.remove("rotate-y-180");
+            }
+        }
+
+        function nextCard() {
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length === 0) return;
+            currentIndex = (currentIndex + 1) % currentList.length;
+            updateCardUI();
+        }
+
+        function prevCard() {
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length === 0) return;
+            currentIndex = (currentIndex - 1 + currentList.length) % currentList.length;
+            updateCardUI();
+        }
+
+        function toggleMastered() {
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length === 0) return;
+            currentList[currentIndex].mastered = !currentList[currentIndex].mastered;
+            saveData();
+            updateCardUI();
+        }
+
+        function speakWord() {
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length === 0) return;
+            let word = currentList[currentIndex].word;
+            let utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'lv-LV';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- PHẦN QUIZ (ĐÃ GIỚI HẠN CHỈ TRONG NHÓM HIỆN TẠI) ---
+        function startQuiz() {
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length < 2) {
+                document.getElementById("quiz-container").innerHTML = `<p class="text-amber-600 text-center py-6">Nhóm này cần ít nhất 2 từ vựng để kiểm tra trắc nghiệm!</p>`;
+                document.getElementById("quiz-result-box").classList.add("hidden");
+                return;
+            }
+            document.getElementById("quiz-result-box").classList.add("hidden");
+            document.getElementById("quiz-container").classList.remove("hidden");
+
+            // Chọn ngẫu nhiên một từ trong đúng danh sách của nhóm hiện tại
+            let targetIdx = Math.floor(Math.random() * currentList.length);
+            let targetItem = currentList[targetIdx];
+            currentQuizCorrectMeaning = targetItem.meaning;
+
+            document.getElementById("quiz-word").innerText = targetItem.word;
+
+            // Tạo các phương án trắc nghiệm CHỈ LẤY từ các từ khác trong chính nhóm hiện tại đó
+            let options = [targetItem.meaning];
+            let shuffledList = [...currentList].sort(() => Math.random() - 0.5);
+            
+            for (let item of shuffledList) {
+                if (options.length >= 4) break;
+                if (!options.includes(item.meaning)) {
+                    options.push(item.meaning);
+                }
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            let optionsHTML = "";
+            options.forEach(opt => {
+                optionsHTML += `<button onclick="checkQuizAnswer(this, '${opt.replace(/'/g, "\\'")}')" class="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:bg-indigo-50 hover:border-indigo-300 font-medium transition shadow-sm">${opt}</button>`;
+            });
+            document.getElementById("quiz-options").innerHTML = optionsHTML;
+        }
+
+        function checkQuizAnswer(btnElement, selectedOption) {
+            let allButtons = document.querySelectorAll("#quiz-options button");
+            allButtons.forEach(btn => btn.disabled = true);
+
+            let feedbackElem = document.getElementById("quiz-feedback");
+            if (selectedOption === currentQuizCorrectMeaning) {
+                btnElement.className = "w-full text-left p-3.5 rounded-xl border bg-emerald-100 border-emerald-400 text-emerald-800 font-medium shadow-sm";
+                feedbackElem.innerText = "🎉 Lieliski! (Tuyệt vời!)";
+                feedbackElem.className = "text-xl font-bold mb-4 text-emerald-600";
+                quizScore += 10;
+            } else {
+                btnElement.className = "w-full text-left p-3.5 rounded-xl border bg-rose-100 border-rose-400 text-rose-800 font-medium shadow-sm";
+                feedbackElem.innerText = `❌ Chưa chính xác! Đáp án đúng: ${currentQuizCorrectMeaning}`;
+                feedbackElem.className = "text-xl font-bold mb-4 text-rose-600";
+                allButtons.forEach(btn => {
+                    if (btn.innerText === currentQuizCorrectMeaning) {
+                        btn.className = "w-full text-left p-3.5 rounded-xl border bg-emerald-100 border-emerald-400 text-emerald-800 font-medium shadow-sm";
+                    }
+                });
+            }
+            document.getElementById("quiz-score").innerText = `Điểm: ${quizScore}`;
+            document.getElementById("quiz-result-box").classList.remove("hidden");
+        }
+
+        function nextQuizQuestion() {
+            startQuiz();
+        }
+
+        function renderTable() {
+            updateGroupSelectors();
+            let tbody = document.getElementById("word-table-body");
+            let currentList = vocabData[activeGroup] || [];
+            if (currentList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400">Nhóm này chưa có từ vựng nào.</td></tr>`;
+                return;
+            }
+            let html = "";
+            currentList.forEach((item, index) => {
+                html += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-3 font-semibold text-slate-800">${item.word} ${item.mastered ? '⭐' : ''}</td>
+                        <td class="p-3 text-slate-600">${item.meaning}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="deleteWord(${index})" class="text-rose-600 hover:text-rose-800 font-medium text-xs bg-rose-50 px-2.5 py-1 rounded-lg">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function addWord() {
+            let word = document.getElementById("input-word").value.trim();
+            let meaning = document.getElementById("input-meaning").value.trim();
+            let example = document.getElementById("input-example").value.trim();
+            let groupName = document.getElementById("input-group-name").value.trim() || activeGroup;
+
+            if (!word || !meaning) {
+                alert("Vui lòng nhập đầy đủ Từ tiếng Latvia và Nghĩa tiếng Việt!");
+                return;
+            }
+
+            if (!vocabData[groupName]) {
+                vocabData[groupName] = [];
+            }
+
+            vocabData[groupName].push({ word, meaning, example, mastered: false });
+            activeGroup = groupName;
+            saveData();
+
+            document.getElementById("input-word").value = "";
+            document.getElementById("input-meaning").value = "";
+            document.getElementById("input-example").value = "";
+            document.getElementById("input-group-name").value = "";
+
+            renderTable();
+            alert(`Đã thêm từ vào nhóm "${groupName}" thành công!`);
+        }
+
+        function importBulkText() {
+            let groupName = document.getElementById("bulk-group-name").value.trim() || activeGroup;
+            let text = document.getElementById("bulk-textarea").value.trim();
+            
+            if (!text) {
+                alert("Vui lòng dán danh sách từ vào ô trống!");
+                return;
+            }
+
+            if (!vocabData[groupName]) {
+                vocabData[groupName] = [];
+            }
+
+            let lines = text.split("\n");
+            let count = 0;
+
+            lines.forEach(line => {
+                let parts = line.split("|");
+                if (parts.length >= 2) {
+                    let word = parts[0].trim();
+                    let meaning = parts[1].trim();
+                    let example = parts[2] ? parts[2].trim() : "";
+                    if (word && meaning) {
+                        vocabData[groupName].push({ word, meaning, example, mastered: false });
+                        count++;
+                    }
+                }
+            });
+
+            if (count > 0) {
+                activeGroup = groupName;
+                saveData();
+                document.getElementById("bulk-textarea").value = "";
+                document.getElementById("bulk-group-name").value = "";
+                renderTable();
+                alert(`Đã thêm thành công ${count} từ vào nhóm "${groupName}"!`);
+            } else {
+                alert("Định dạng không đúng! Vui lòng dùng dấu | để ngăn cách, ví dụ: Labrīt | Chào buổi sáng");
+            }
+        }
+
+        function deleteWord(index) {
+            if (confirm("Vui lòng xác nhận xóa từ này?")) {
+                vocabData[activeGroup].splice(index, 1);
+                saveData();
+                renderTable();
+            }
+        }
+
+        function deleteCurrentGroup() {
+            let groups = Object.keys(vocabData);
+            if (groups.length <= 1) {
+                alert("Bạn không thể xóa nhóm cuối cùng còn lại!");
+                return;
+            }
+            if (confirm(`Bạn có chắc chắn muốn xóa toàn bộ nhóm "${activeGroup}" không?`)) {
+                delete vocabData[activeGroup];
+                activeGroup = Object.keys(vocabData)[0];
+                saveData();
+                renderTable();
+                alert("Đã xóa nhóm thành công!");
+            }
+        }
+
+        updateGroupSelectors();
+        updateCardUI();
+    </script>
+</body>
+</html>
